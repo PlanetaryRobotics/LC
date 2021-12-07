@@ -188,12 +188,12 @@ static CFE_TBL_FileDef_t CFE_TBL_FileDef __attribute__((__used__)) =
 LC_ADTEntry_t LC_DefaultADT[LC_MAX_ACTIONPOINTS] =
 {
     /* #0 (unused) */
-    {   .DefaultState        = LC_ACTION_NOT_USED,
-        .MaxPassiveEvents    = 0,
-        .MaxPassFailEvents   = 0,
-        .MaxFailPassEvents   = 0,
-        .RTSId               = 0,
-        .MaxFailsBeforeRTS   = 0,
+    {   .DefaultState        = LC_APSTATE_ACTIVE,
+        .MaxPassiveEvents    = 2,
+        .MaxPassFailEvents   = 2,
+        .MaxFailPassEvents   = 2,
+        .RTSId               = RTS_ID_VEL_TOO_HIGH, // 3
+        .MaxFailsBeforeRTS   = 1,
         .EventType           = CFE_EVS_EventType_INFORMATION,
         .EventID             = 0,
         .EventText           = { " " },
