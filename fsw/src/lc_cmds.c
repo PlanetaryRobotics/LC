@@ -105,13 +105,15 @@ int32 LC_AppPipe(CFE_SB_MsgPtr_t MessagePtr)
             } /* end CommandCode switch */
             break;
             
-            /*
-            ** All other message ID's should be monitor
-            ** packets
-            */
-            default:
-                LC_CheckMsgForWPs(MessageID, MessagePtr);
-                break;
+        /*
+        ** All other message ID's should be monitor
+        ** packets
+        */
+
+        default:
+            OS_printf("Message Recieved:  %d \n", MessageID);
+            LC_CheckMsgForWPs(MessageID, MessagePtr);
+            break;
             
     } /* end MessageID switch */
     

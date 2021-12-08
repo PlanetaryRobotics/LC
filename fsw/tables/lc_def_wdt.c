@@ -111,10 +111,10 @@ LC_WDTEntry_t LC_DefaultWDT[LC_MAX_WATCHPOINTS] =
 {
     /* #0 (used) */
     {
-        .DataType                   = LC_DATA_UDWORD_BE,
+        .DataType                   = LC_DATA_DWORD_LE,
         .OperatorID                 = LC_OPER_GT,
-        .MessageID                  = INTERCOM_APP_CMD_MID,
-        .WatchpointOffset           = 64, // uint32, uint32, from CFE_TIME_SysTime_t ?
+        .MessageID                  = INTERCOM_APP_MOTOR_HEALTH,
+        .WatchpointOffset           = 5,
         .BitMask                    = LC_NO_BITMASK,
         .CustomFuncArgument         = 0,
         .ResultAgeWhenStale         = 0,

@@ -190,14 +190,14 @@ LC_ADTEntry_t LC_DefaultADT[LC_MAX_ACTIONPOINTS] =
 {
     /* #0 (used) */
     {   .DefaultState        = LC_APSTATE_ACTIVE,
-        .MaxPassiveEvents    = 2,
-        .MaxPassFailEvents   = 2,
-        .MaxFailPassEvents   = 2,
+        .MaxPassiveEvents    = 0,
+        .MaxPassFailEvents   = 0,
+        .MaxFailPassEvents   = 0,
         .RTSId               = RTS_ID_MOTOR_VEL_TOO_HIGH, // 3
         .MaxFailsBeforeRTS   = 1,
-        .EventType           = CFE_EVS_EventType_INFORMATION,
-        .EventID             = 0,
-        .EventText           = { " " },
+        .EventType           = CFE_EVS_EventType_ERROR,
+        .EventID             = LC_BASE_AP_EID + 1000,
+        .EventText           = { "LC: Motor Velocity is too high" },
         .RPNEquation         = { /* (WP_0) */
                                  0,
                                  LC_RPN_EQUAL

@@ -111,7 +111,7 @@
 **       #LC_STATE_PASSIVE
 **       #LC_STATE_DISABLED
 */
-#define LC_STATE_POWER_ON_RESET        LC_STATE_DISABLED
+#define LC_STATE_POWER_ON_RESET        LC_STATE_ACTIVE
 
 /** \lccfg Save data to CDS compiler switch
 **  
