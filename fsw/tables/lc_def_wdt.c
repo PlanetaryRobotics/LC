@@ -42,6 +42,7 @@
 #include "lc_msgdefs.h"
 #include "lc_tbl.h"
 #include "lc_app.h"
+#include "moonranger_msgids.h"
 
 /*************************************************************************
 ** Examples
@@ -108,12 +109,12 @@ static CFE_TBL_FileDef_t CFE_TBL_FileDef __attribute__((__used__)) =
 */
 LC_WDTEntry_t LC_DefaultWDT[LC_MAX_WATCHPOINTS] =
 {
-    /* #0 (unused) */
+    /* #0 (used) */
     {
         .DataType                   = LC_DATA_UDWORD_BE,
         .OperatorID                 = LC_OPER_GT,
-        .MessageID                  = INTERCOM_APP_GET_MOTOR_HEALTH,
-        .WatchpointOffset           = 64, // uint32, uint32, from CFE_TIME_SysTime_t
+        .MessageID                  = INTERCOM_APP_CMD_MID,
+        .WatchpointOffset           = 64, // uint32, uint32, from CFE_TIME_SysTime_t ?
         .BitMask                    = LC_NO_BITMASK,
         .CustomFuncArgument         = 0,
         .ResultAgeWhenStale         = 0,

@@ -3,6 +3,9 @@ project(CFS_LC C)
 
 include_directories(fsw/mission_inc)
 include_directories(fsw/platform_inc)
+include_directories(${moonranger_msgs_MISSION_DIR}/fsw/public_inc)
+include_directories(../SC/fsw/platform_inc)
+
 
 aux_source_directory(fsw/src APP_SRC_FILES)
 
