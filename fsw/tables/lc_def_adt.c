@@ -2,40 +2,40 @@
 ** File:
 **   $Id: lc_def_adt.c 1.3 2017/01/22 17:25:08EST sstrege Exp  $
 **
-**  Copyright (c) 2007-2020 United States Government as represented by the 
-**  Administrator of the National Aeronautics and Space Administration. 
-**  All Other Rights Reserved.  
+**  Copyright (c) 2007-2020 United States Government as represented by the
+**  Administrator of the National Aeronautics and Space Administration.
+**  All Other Rights Reserved.
 **
 **  This software was created at NASA's Goddard Space Flight Center.
-**  This software is governed by the NASA Open Source Agreement and may be 
-**  used, distributed and modified only pursuant to the terms of that 
+**  This software is governed by the NASA Open Source Agreement and may be
+**  used, distributed and modified only pursuant to the terms of that
 **  agreement.
 **
-** Purpose: 
+** Purpose:
 **   Limit Checker (LC) default actionpoint definition table (ADT)
 **
 ** Notes:
 **   This file provides a default ADT table that simply sets all
 **   actionpoint entries to "not used". It has been formatted to make
-**   it easy for mission developers to edit as needed (see the 
+**   it easy for mission developers to edit as needed (see the
 **   examples section below).
 **
-**   LC will append a trailer string to the end of the text 
+**   LC will append a trailer string to the end of the text
 **   specified in the "EventText" field with additional information.
 **   See lc_action.h for the format.
 **
 **   Compiler Note
 **   -------------
-**   This file may generate the following warning when compiling 
+**   This file may generate the following warning when compiling
 **   with gcc if you are using the flags "-ansi -pedantic":
-** 
+**
 **   "warning: ISO C90 forbids specifying subobject to initialize"
 **
 **   Removing "-pedantic" should eliminate the warning. An alternate
 **   solution is to replace "-ansi" with "-std=c99" and leave the
 **   "-pedantic" flag in place
-** 
-** 
+**
+**
 *************************************************************************/
 
 /*************************************************************************
@@ -56,7 +56,7 @@
 ** Actions that trigger off a single watchpoint:
 ** (see lc_def_wdt.c for companion watchpoint definitions)
 **
-**    ** #100 **  
+**    ** #100 **
 **    {
 **        .DefaultState        = LC_APSTATE_DISABLED,
 **        .MaxPassiveEvents    = 2,
@@ -72,7 +72,7 @@
 **                                 LC_RPN_EQUAL
 **                               }
 **    },
-** 
+**
 **    ** #101 **
 **    {
 **        .DefaultState        = LC_APSTATE_DISABLED,
@@ -89,7 +89,7 @@
 **                                 LC_RPN_EQUAL
 **                               }
 **    },
-** 
+**
 ** Examples of more complex Reverse Polish Notation expressions:
 **
 **    ** #43 **
@@ -190,14 +190,14 @@ LC_ADTEntry_t LC_DefaultADT[LC_MAX_ACTIONPOINTS] =
 {
     /* #0 (used) */
     {   .DefaultState        = LC_APSTATE_ACTIVE,
-        .MaxPassiveEvents    = 0,
-        .MaxPassFailEvents   = 0,
-        .MaxFailPassEvents   = 0,
+        .MaxPassiveEvents    = 1,
+        .MaxPassFailEvents   = 1,
+        .MaxFailPassEvents   = 1,
         .RTSId               = RTS_ID_MOTOR_VEL_TOO_HIGH, // 3
-        .MaxFailsBeforeRTS   = 1,
-        .EventType           = CFE_EVS_EventType_ERROR,
-        .EventID             = LC_BASE_AP_EID + 1000,
-        .EventText           = { "LC: Motor Velocity is too high" },
+        .MaxFailsBeforeRTS   = 2,
+        .EventType           = CFE_EVS_EventType_INFORMATION,
+        .EventID             = LC_BASE_AP_EID + 100,
+        .EventText           = { "Motor Velocity is too high!!!" },
         .RPNEquation         = { /* (WP_0) */
                                  0,
                                  LC_RPN_EQUAL
