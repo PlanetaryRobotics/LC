@@ -250,6 +250,9 @@ void LC_CheckMsgForWPs(CFE_SB_MsgId_t MessageID, CFE_SB_MsgPtr_t MessagePtr)
     LC_MessageList_t  *MessageList;
     LC_WatchPtList_t  *WatchPtList;
     bool               WatchPtFound = false   ;
+
+    OS_printf("LC_WATCH -- Message Received:  %d \n", MessageID);
+
     
     /* Do nothing if disabled at the application level */
     if (LC_AppData.CurrentLCState != LC_STATE_DISABLED)
@@ -292,10 +295,13 @@ void LC_CheckMsgForWPs(CFE_SB_MsgId_t MessageID, CFE_SB_MsgPtr_t MessagePtr)
             while (WatchPtList != (LC_WatchPtList_t *) NULL)
             {
                 WatchPtFound = true   ;
+
+                OS_printf("LC_WATCH -- WatchPtFound:  %d \n", WatchPtFound);
                 
                 /* Verify that WP packet offset is within actual packet */
                 if (LC_WPOffsetValid(WatchPtList->WatchIndex, MessagePtr) == true   )
                 {
+                    OS_printf("LC_WATCH -- Message offset is valid\n");
                     LC_ProcessWP(WatchPtList->WatchIndex, MessagePtr, Timestamp);
                 }
 
@@ -356,6 +362,9 @@ void LC_ProcessWP(uint16             WatchIndex,
         ** Get the last evalution result for this watchpoint
         */
         PreviousResult = LC_OperData.WRTPtr[WatchIndex].WatchResult;
+
+        OS_printf("LC_WATCH -- LC_ProcessWP -- PreviousResult:  %d \n", PreviousResult);
+
         
         /*
         ** Apply the defined bitmask for this watchpoint and then
@@ -366,6 +375,8 @@ void LC_ProcessWP(uint16             WatchIndex,
         
         if (LC_OperData.WDTPtr[WatchIndex].OperatorID == LC_OPER_CUSTOM)
         {
+          OS_printf("LC_WATCH -- LC_ProcessWP -- OperatorID == LC_OPER_CUSTOM\n");
+ 
            WPEvalResult = LC_CustomFunction(WatchIndex,
                                             MaskedWPData,
                                             MessagePtr,
@@ -373,6 +384,7 @@ void LC_ProcessWP(uint16             WatchIndex,
         }
         else
         {
+        OS_printf("LC_WATCH -- LC_ProcessWP -- OperatorID == LC_OperatorCompare\n");
            WPEvalResult = LC_OperatorCompare(WatchIndex, MaskedWPData);
         }
      
@@ -490,7 +502,9 @@ uint8 LC_OperatorCompare(uint16 WatchIndex,
            WatchpointValue.Unsigned32 = ProcessedWPData;
            break;
     }
+    
     ComparisonValue = LC_OperData.WDTPtr[WatchIndex].ComparisonValue;
+    OS_printf("LC_WATCH -- Actual & ComparisonValue:  %d & %d \n", WatchpointValue.Unsigned32, ComparisonValue);
 
     /*
     ** Handle the comparison appropriately depending on the data type
@@ -567,6 +581,8 @@ uint8 LC_OperatorCompare(uint16 WatchIndex,
             EvalResult = LC_WATCH_ERROR;
             break;
     }
+
+    OS_printf("LC_WATCH -- EvalResult:  %d \n", EvalResult);
     
     return (EvalResult);
     

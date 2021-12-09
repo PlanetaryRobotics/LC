@@ -111,7 +111,7 @@ int32 LC_AppPipe(CFE_SB_MsgPtr_t MessagePtr)
         */
 
         default:
-            OS_printf("Message Recieved:  %d \n", MessageID);
+            OS_printf("LC_CMDS -- Message Received:  %d \n", MessageID);
             LC_CheckMsgForWPs(MessageID, MessagePtr);
             break;
             
