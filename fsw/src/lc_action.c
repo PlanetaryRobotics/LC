@@ -2,128 +2,117 @@
 ** File:
 **   $Id: lc_action.c 1.8 2017/07/06 12:00:28EDT mdeschu Exp  $
 **
-**  Copyright (c) 2007-2020 United States Government as represented by the 
-**  Administrator of the National Aeronautics and Space Administration. 
-**  All Other Rights Reserved.  
+**  Copyright (c) 2007-2020 United States Government as represented by the
+**  Administrator of the National Aeronautics and Space Administration.
+**  All Other Rights Reserved.
 **
 **  This software was created at NASA's Goddard Space Flight Center.
-**  This software is governed by the NASA Open Source Agreement and may be 
-**  used, distributed and modified only pursuant to the terms of that 
+**  This software is governed by the NASA Open Source Agreement and may be
+**  used, distributed and modified only pursuant to the terms of that
 **  agreement.
 **
-** Purpose: 
+** Purpose:
 **   Functions used for CFS Limit Checker actionpoint processing
 **
-** 
+**
 *************************************************************************/
 
 /*************************************************************************
 ** Includes
 *************************************************************************/
-#include "lc_app.h"
 #include "lc_action.h"
-#include "lc_msgids.h"
-#include "lc_events.h"
-#include "lc_custom.h"
 
 #include <string.h>
+
+#include "lc_app.h"
+#include "lc_custom.h"
+#include "lc_events.h"
+#include "lc_msgids.h"
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                 */
 /* Sample one or all actionpoints                                  */
 /*                                                                 */
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */   
-void LC_SampleAPs(uint16 StartIndex, uint16 EndIndex)
-{
-    uint16           TableIndex;
-    uint8            CurrentAPState;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+void LC_SampleAPs(uint16 StartIndex, uint16 EndIndex) {
+    uint16 TableIndex;
+    uint8 CurrentAPState;
 
     /*
     ** If we're specifying a single actionpoint, make sure it's
     ** current state is valid for a sample request
     */
-    if (StartIndex == EndIndex)
-    {
+    if (StartIndex == EndIndex) {
         CurrentAPState = LC_OperData.ARTPtr[StartIndex].CurrentState;
-         
+
         if ((CurrentAPState != LC_ACTION_NOT_USED) &&
-            (CurrentAPState != LC_APSTATE_PERMOFF))
-        {
+            (CurrentAPState != LC_APSTATE_PERMOFF)) {
             /*
             ** Sample the specified actionpoint
             */
             LC_SampleSingleAP(StartIndex);
-        }
-        else
-        {
+        } else {
             /*
-            **  Actionpoint isn't currently operational 
+            **  Actionpoint isn't currently operational
             */
             CFE_EVS_SendEvent(LC_APSAMPLE_CURR_ERR_EID, CFE_EVS_EventType_ERROR,
-                              "Sample AP error, invalid current AP state: AP = %d, State = %d", 
+                              "Sample AP error, invalid current AP state: AP = "
+                              "%d, State = %d",
                               StartIndex, CurrentAPState);
         }
-    }
-    else
-    {
+    } else {
         /*
         ** Sample selected actionpoints
         */
-        for (TableIndex = StartIndex; TableIndex <= EndIndex; TableIndex++)
-        {
+        for (TableIndex = StartIndex; TableIndex <= EndIndex; TableIndex++) {
             LC_SampleSingleAP(TableIndex);
         }
-        
     }
 
     return;
-    
+
 } /* end LC_SampleAP */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                 */
 /* Sample a single actionpoint                                     */
 /*                                                                 */
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */   
-void LC_SampleSingleAP(uint16 APNumber)
-{
-    uint8  CurrentAPState;
-    uint8  PreviousResult;
-    uint8  CurrentResult;
-    char   EventText[CFE_MISSION_EVS_MAX_MESSAGE_LENGTH];
-     
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+void LC_SampleSingleAP(uint16 APNumber) {
+    uint8 CurrentAPState;
+    uint8 PreviousResult;
+    uint8 CurrentResult;
+    char EventText[CFE_MISSION_EVS_MAX_MESSAGE_LENGTH];
+
     /*
     ** We only do the sample if the actionpoint is active
     ** or passive. Other states are ignored since this
     ** routine is called in a loop to process ALL actionpoints.
     */
     CurrentAPState = LC_OperData.ARTPtr[APNumber].CurrentState;
-    
+
     if ((CurrentAPState == LC_APSTATE_ACTIVE) ||
-        (CurrentAPState == LC_APSTATE_PASSIVE))
-    {
+        (CurrentAPState == LC_APSTATE_PASSIVE)) {
         /*
         ** Evaluate the actionpoint and update the results
         ** as needed
         */
         LC_AppData.APSampleCount++;
-        
+
         PreviousResult = LC_OperData.ARTPtr[APNumber].ActionResult;
-        
+
         CurrentResult = LC_EvaluateRPN(APNumber);
 
         LC_OperData.ARTPtr[APNumber].ActionResult = CurrentResult;
-        
+
         /*****************************************
         ** If actionpoint fails current evaluation
         ******************************************/
-        if (CurrentResult == LC_ACTION_FAIL)
-            {
+        if (CurrentResult == LC_ACTION_FAIL) {
             LC_OperData.ARTPtr[APNumber].ConsecutiveFailCount++;
             LC_OperData.ARTPtr[APNumber].CumulativeFailCount++;
-            
-            if (PreviousResult == LC_ACTION_PASS)
-                {
+
+            if (PreviousResult == LC_ACTION_PASS) {
                 /*
                 **  We failed this time, but we passed last time
                 */
@@ -133,32 +122,29 @@ void LC_SampleSingleAP(uint16 APNumber)
                 **  Send only a limited number of Pass to Fail events
                 */
                 if (LC_OperData.ARTPtr[APNumber].PassToFailCount <=
-                    LC_OperData.ADTPtr[APNumber].MaxPassFailEvents)
-                    {
-                    CFE_EVS_SendEvent(LC_AP_PASSTOFAIL_INF_EID, CFE_EVS_EventType_INFORMATION,
-                                     "AP state change from PASS to FAIL: AP = %d", 
-                                      APNumber);
+                    LC_OperData.ADTPtr[APNumber].MaxPassFailEvents) {
+                    CFE_EVS_SendEvent(
+                        LC_AP_PASSTOFAIL_INF_EID, CFE_EVS_EventType_INFORMATION,
+                        "AP state change from PASS to FAIL: AP = %d", APNumber);
                     LC_OperData.ARTPtr[APNumber].CumulativeEventMsgsSent++;
-                    }
                 }
+            }
 
             if (LC_OperData.ARTPtr[APNumber].ConsecutiveFailCount >=
-                LC_OperData.ADTPtr[APNumber].MaxFailsBeforeRTS)
-                {
-                /* 
-                ** We have failed enough times to request the RTS 
+                LC_OperData.ADTPtr[APNumber].MaxFailsBeforeRTS) {
+                /*
+                ** We have failed enough times to request the RTS
                 */
-                if (CurrentAPState == LC_APSTATE_ACTIVE)
-                    {
-                    /* 
-                    ** Actions go to passive after they've failed 
+                if (CurrentAPState == LC_APSTATE_ACTIVE) {
+                    /*
+                    ** Actions go to passive after they've failed
                     */
-                    LC_OperData.ARTPtr[APNumber].CurrentState = LC_APSTATE_PASSIVE;
+                    LC_OperData.ARTPtr[APNumber].CurrentState =
+                        LC_APSTATE_PASSIVE;
 
-                    if (LC_AppData.CurrentLCState == LC_STATE_ACTIVE)
-                        {
+                    if (LC_AppData.CurrentLCState == LC_STATE_ACTIVE) {
                         /*
-                        ** If the LC application state is active, request the 
+                        ** If the LC application state is active, request the
                         ** specified RTS be executed
                         */
                         LC_ExecuteRTS(LC_OperData.ADTPtr[APNumber].RTSId);
@@ -167,7 +153,7 @@ void LC_SampleSingleAP(uint16 APNumber)
 
                         LC_AppData.RTSExecCount++;
 
-                        /* 
+                        /*
                         ** Copy event text specific to this action
                         ** making sure to NUL terminate in case the event
                         ** text is too long since strncpy won't
@@ -183,39 +169,40 @@ void LC_SampleSingleAP(uint16 APNumber)
                         ** strncat will always NUL terminate so we have
                         ** to subtract 1 from the max to leave room for it.
                         */
-                        strncat(EventText, 
-                                LC_AP_EVENT_TAIL_STR,
-                                (CFE_MISSION_EVS_MAX_MESSAGE_LENGTH - LC_MAX_ACTION_TEXT) - 1);
+                        strncat(EventText, LC_AP_EVENT_TAIL_STR,
+                                (CFE_MISSION_EVS_MAX_MESSAGE_LENGTH -
+                                 LC_MAX_ACTION_TEXT) -
+                                    1);
 
                         CFE_EVS_SendEvent(
                             LC_OperData.ADTPtr[APNumber].EventID,
-                            LC_OperData.ADTPtr[APNumber].EventType,
-                            EventText, APNumber,
+                            LC_OperData.ADTPtr[APNumber].EventType, EventText,
+                            APNumber,
                             LC_OperData.ARTPtr[APNumber].ConsecutiveFailCount,
                             LC_OperData.ADTPtr[APNumber].RTSId);
-                        
+
                         LC_OperData.ARTPtr[APNumber].CumulativeEventMsgsSent++;
-                        }
-                    else
-                        {
+                    } else {
                         /*
                         ** The LC application state is passive so we don't
-                        ** do the RTS request. We bump the passive RTS execution 
+                        ** do the RTS request. We bump the passive RTS execution
                         ** counter and send out a generic event message
                         */
                         LC_AppData.PassiveRTSExecCount++;
 
-                        CFE_EVS_SendEvent(LC_PASSIVE_FAIL_DBG_EID, CFE_EVS_EventType_DEBUG,
-                            "AP failed while LC App passive: AP = %d, FailCount = %d, RTS = %d",
-                            APNumber,
-                            (int)LC_OperData.ARTPtr[APNumber].ConsecutiveFailCount,
-                            LC_OperData.ADTPtr[APNumber].RTSId);
-                        }
+                        CFE_EVS_SendEvent(LC_PASSIVE_FAIL_DBG_EID,
+                                          CFE_EVS_EventType_DEBUG,
+                                          "AP failed while LC App passive: AP "
+                                          "= %d, FailCount = %d, RTS = %d",
+                                          APNumber,
+                                          (int)LC_OperData.ARTPtr[APNumber]
+                                              .ConsecutiveFailCount,
+                                          LC_OperData.ADTPtr[APNumber].RTSId);
                     }
-                else
-                    {
+                } else {
                     /*
-                    ** The actionpoint failed while the actionpoint state is passive
+                    ** The actionpoint failed while the actionpoint state is
+                    *passive
                     */
                     LC_OperData.ARTPtr[APNumber].PassiveAPCount++;
                     LC_AppData.PassiveRTSExecCount++;
@@ -224,28 +211,28 @@ void LC_SampleSingleAP(uint16 APNumber)
                     **  Send only a limited number of AP is Passive events
                     */
                     if (LC_OperData.ARTPtr[APNumber].PassiveAPCount <=
-                    LC_OperData.ADTPtr[APNumber].MaxPassiveEvents)
-                        {
-                        CFE_EVS_SendEvent(LC_AP_PASSIVE_FAIL_INF_EID, CFE_EVS_EventType_INFORMATION,
-                            "AP failed while passive: AP = %d, FailCount = %d, RTS = %d",
-                            APNumber,
-                            (int)LC_OperData.ARTPtr[APNumber].ConsecutiveFailCount,
-                            LC_OperData.ADTPtr[APNumber].RTSId);
+                        LC_OperData.ADTPtr[APNumber].MaxPassiveEvents) {
+                        CFE_EVS_SendEvent(LC_AP_PASSIVE_FAIL_INF_EID,
+                                          CFE_EVS_EventType_INFORMATION,
+                                          "AP failed while passive: AP = %d, "
+                                          "FailCount = %d, RTS = %d",
+                                          APNumber,
+                                          (int)LC_OperData.ARTPtr[APNumber]
+                                              .ConsecutiveFailCount,
+                                          LC_OperData.ADTPtr[APNumber].RTSId);
                         LC_OperData.ARTPtr[APNumber].CumulativeEventMsgsSent++;
-                        }
                     }
+                }
 
-                } /* end (ConsecutiveFailCount >= MaxFailsBeforeRTS) if */
-            
-            } /* end (CurrentResult == LC_ACTION_FAIL) if */
-        
+            } /* end (ConsecutiveFailCount >= MaxFailsBeforeRTS) if */
+
+        } /* end (CurrentResult == LC_ACTION_FAIL) if */
+
         /******************************************
         ** If actionpoint passes current evaluation
         *******************************************/
-        else if (CurrentResult == LC_ACTION_PASS)
-        {
-            if (PreviousResult == LC_ACTION_FAIL)
-            {
+        else if (CurrentResult == LC_ACTION_PASS) {
+            if (PreviousResult == LC_ACTION_FAIL) {
                 /*
                 **  We passed this time, but we failed last time
                 */
@@ -255,32 +242,28 @@ void LC_SampleSingleAP(uint16 APNumber)
                 **  Send only a limited number of Fail to Pass events
                 */
                 if (LC_OperData.ARTPtr[APNumber].FailToPassCount <=
-                    LC_OperData.ADTPtr[APNumber].MaxFailPassEvents)
-                    {
-                    CFE_EVS_SendEvent(LC_AP_FAILTOPASS_INF_EID, CFE_EVS_EventType_INFORMATION,
-                                     "AP state change from FAIL to PASS: AP = %d", 
-                                      APNumber);
+                    LC_OperData.ADTPtr[APNumber].MaxFailPassEvents) {
+                    CFE_EVS_SendEvent(
+                        LC_AP_FAILTOPASS_INF_EID, CFE_EVS_EventType_INFORMATION,
+                        "AP state change from FAIL to PASS: AP = %d", APNumber);
                     LC_OperData.ARTPtr[APNumber].CumulativeEventMsgsSent++;
-                    }
+                }
             }
             /*
             ** Clear consecutive failure counter for this AP
             */
             LC_OperData.ARTPtr[APNumber].ConsecutiveFailCount = 0;
         }
-        
+
         /*
         ** If actionpoint is not measured or has gone stale
         */
-        else if (CurrentResult == LC_ACTION_STALE)
-        {
+        else if (CurrentResult == LC_ACTION_STALE) {
             /*
             ** Make sure the consecutive fail count is zeroed
             */
             LC_OperData.ARTPtr[APNumber].ConsecutiveFailCount = 0;
-        }
-        else
-        {
+        } else {
             /*
             ** We got back a LC_ACTION_ERROR result, send event
             */
@@ -288,11 +271,11 @@ void LC_SampleSingleAP(uint16 APNumber)
                               "AP evaluated to error: AP = %d, Result = %d",
                               APNumber, CurrentResult);
         }
-     
+
     } /* end CurrentAPState if */
-    
+
     return;
-    
+
 } /* end LC_SampleSingleAP */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -300,40 +283,36 @@ void LC_SampleSingleAP(uint16 APNumber)
 /* Evaluate the Reverse Polish Notation (RPN) equation for an      */
 /* actionpoint                                                     */
 /*                                                                 */
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */   
-#define  POP_RPN_DATA     ((StackPtr <= 0)                       \
-                                      ? (IllegalRPN = true   )      \
-                                      : (RPNStack [--StackPtr]))
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#define POP_RPN_DATA \
+    ((StackPtr <= 0) ? (IllegalRPN = true) : (RPNStack[--StackPtr]))
 
-#define PUSH_RPN_DATA(x)  ((StackPtr >= LC_MAX_RPN_EQU_SIZE)      \
-                                      ? (IllegalRPN = true   )       \
-                                      : (RPNStack [StackPtr++] = x))
-uint8 LC_EvaluateRPN(uint16 APNumber)
-{
-    bool     Done;
-    bool     IllegalRPN;
-    bool     IllegalOperand;
-    uint8    EvalResult = LC_ACTION_ERROR;
-    int32    RPNEquationPtr;
-    int32    StackPtr;
-    uint16   RPNData;
-    uint16   RPNStack [LC_MAX_RPN_EQU_SIZE];
-    uint16   Operand1;
-    uint16   Operand2;
+#define PUSH_RPN_DATA(x)                                     \
+    ((StackPtr >= LC_MAX_RPN_EQU_SIZE) ? (IllegalRPN = true) \
+                                       : (RPNStack[StackPtr++] = x))
+uint8 LC_EvaluateRPN(uint16 APNumber) {
+    bool Done;
+    bool IllegalRPN;
+    bool IllegalOperand;
+    uint8 EvalResult = LC_ACTION_ERROR;
+    int32 RPNEquationPtr;
+    int32 StackPtr;
+    uint16 RPNData;
+    uint16 RPNStack[LC_MAX_RPN_EQU_SIZE];
+    uint16 Operand1;
+    uint16 Operand2;
 
     StackPtr       = 0;
     RPNEquationPtr = 0;
-    IllegalRPN     = false   ;
-    IllegalOperand = false   ;
-    Done           = false   ;
+    IllegalRPN     = false;
+    IllegalOperand = false;
+    Done           = false;
 
-    /* 
-    ** Keep going till we're done or till we get an error 
+    /*
+    ** Keep going till we're done or till we get an error
     */
-    while ((Done == false   )          && 
-           (IllegalRPN == false   )    &&
-           (IllegalOperand == false   ))
-    {
+    while ((Done == false) && (IllegalRPN == false) &&
+           (IllegalOperand == false)) {
         /*
         **  Pick off each piece of the RPN equation and handle
         **  one at a time
@@ -343,8 +322,7 @@ uint8 LC_EvaluateRPN(uint16 APNumber)
         /*
         **  The data is either an RPN operator or a watchpoint number
         */
-        switch (RPNData)
-        {
+        switch (RPNData) {
             /*
             **  If the data is an RPN operator then each operand is
             **  either a watchpoint evaluation result or it is the
@@ -353,48 +331,34 @@ uint8 LC_EvaluateRPN(uint16 APNumber)
             case LC_RPN_AND:
                 Operand2 = POP_RPN_DATA;
                 Operand1 = POP_RPN_DATA;
-                if ((Operand1 == LC_WATCH_FALSE   ) ||
-                    (Operand2 == LC_WATCH_FALSE   ))
-                {
-                    PUSH_RPN_DATA (LC_WATCH_FALSE   );
-                }
-                else if ((Operand1 == LC_WATCH_ERROR) ||
-                         (Operand2 == LC_WATCH_ERROR))
-                {
-                    PUSH_RPN_DATA (LC_WATCH_ERROR);
-                }
-                else if ((Operand1 == LC_WATCH_STALE) ||
-                         (Operand2 == LC_WATCH_STALE))
-                {
-                    PUSH_RPN_DATA (LC_WATCH_STALE);
-                }
-                else
-                {
-                    PUSH_RPN_DATA (LC_WATCH_TRUE   );
+                if ((Operand1 == LC_WATCH_FALSE) ||
+                    (Operand2 == LC_WATCH_FALSE)) {
+                    PUSH_RPN_DATA(LC_WATCH_FALSE);
+                } else if ((Operand1 == LC_WATCH_ERROR) ||
+                           (Operand2 == LC_WATCH_ERROR)) {
+                    PUSH_RPN_DATA(LC_WATCH_ERROR);
+                } else if ((Operand1 == LC_WATCH_STALE) ||
+                           (Operand2 == LC_WATCH_STALE)) {
+                    PUSH_RPN_DATA(LC_WATCH_STALE);
+                } else {
+                    PUSH_RPN_DATA(LC_WATCH_TRUE);
                 }
                 break;
 
             case LC_RPN_OR:
                 Operand2 = POP_RPN_DATA;
                 Operand1 = POP_RPN_DATA;
-                if ((Operand1 == LC_WATCH_TRUE   ) ||
-                    (Operand2 == LC_WATCH_TRUE   ))
-                {
-                    PUSH_RPN_DATA (LC_WATCH_TRUE   );
-                }
-                else if ((Operand1 == LC_WATCH_ERROR) ||
-                         (Operand2 == LC_WATCH_ERROR))
-                {
-                    PUSH_RPN_DATA (LC_WATCH_ERROR);
-                }
-                else if ((Operand1 == LC_WATCH_STALE) ||
-                         (Operand2 == LC_WATCH_STALE))
-                {
-                    PUSH_RPN_DATA (LC_WATCH_STALE);
-                }
-                else
-                {
-                    PUSH_RPN_DATA (LC_WATCH_FALSE   );
+                if ((Operand1 == LC_WATCH_TRUE) ||
+                    (Operand2 == LC_WATCH_TRUE)) {
+                    PUSH_RPN_DATA(LC_WATCH_TRUE);
+                } else if ((Operand1 == LC_WATCH_ERROR) ||
+                           (Operand2 == LC_WATCH_ERROR)) {
+                    PUSH_RPN_DATA(LC_WATCH_ERROR);
+                } else if ((Operand1 == LC_WATCH_STALE) ||
+                           (Operand2 == LC_WATCH_STALE)) {
+                    PUSH_RPN_DATA(LC_WATCH_STALE);
+                } else {
+                    PUSH_RPN_DATA(LC_WATCH_FALSE);
                 }
                 break;
 
@@ -402,51 +366,37 @@ uint8 LC_EvaluateRPN(uint16 APNumber)
                 Operand2 = POP_RPN_DATA;
                 Operand1 = POP_RPN_DATA;
                 if ((Operand1 == LC_WATCH_ERROR) ||
-                    (Operand2 == LC_WATCH_ERROR))
-                {
-                    PUSH_RPN_DATA (LC_WATCH_ERROR);
-                }
-                else if ((Operand1 == LC_WATCH_STALE) ||
-                         (Operand2 == LC_WATCH_STALE))
-                {
-                    PUSH_RPN_DATA (LC_WATCH_STALE);
-                }
-                else
-                {
-                    PUSH_RPN_DATA (Operand1 != Operand2);
+                    (Operand2 == LC_WATCH_ERROR)) {
+                    PUSH_RPN_DATA(LC_WATCH_ERROR);
+                } else if ((Operand1 == LC_WATCH_STALE) ||
+                           (Operand2 == LC_WATCH_STALE)) {
+                    PUSH_RPN_DATA(LC_WATCH_STALE);
+                } else {
+                    PUSH_RPN_DATA(Operand1 != Operand2);
                 }
                 break;
 
             case LC_RPN_NOT:
                 Operand1 = POP_RPN_DATA;
-                if (Operand1 == LC_WATCH_ERROR)
-                {
-                    PUSH_RPN_DATA (LC_WATCH_ERROR);
-                }
-                else if (Operand1 == LC_WATCH_STALE)
-                {
-                    PUSH_RPN_DATA (LC_WATCH_STALE);
-                }
-                else
-                {
-                    PUSH_RPN_DATA (Operand1 == LC_WATCH_FALSE   );
+                if (Operand1 == LC_WATCH_ERROR) {
+                    PUSH_RPN_DATA(LC_WATCH_ERROR);
+                } else if (Operand1 == LC_WATCH_STALE) {
+                    PUSH_RPN_DATA(LC_WATCH_STALE);
+                } else {
+                    PUSH_RPN_DATA(Operand1 == LC_WATCH_FALSE);
                 }
                 break;
 
             case LC_RPN_EQUAL:
                 EvalResult = POP_RPN_DATA;
                 if ((EvalResult == LC_WATCH_ERROR) ||
-                    (EvalResult == LC_WATCH_STALE))
-                {
-                    IllegalOperand = true   ;
+                    (EvalResult == LC_WATCH_STALE)) {
+                    IllegalOperand = true;
                 }
-                if (StackPtr == 0)
-                {
-                    Done = true   ;
-                }
-                else
-                {
-                    IllegalRPN = true   ;
+                if (StackPtr == 0) {
+                    Done = true;
+                } else {
+                    IllegalRPN = true;
                 }
                 break;
 
@@ -455,84 +405,70 @@ uint8 LC_EvaluateRPN(uint16 APNumber)
             **  the current value of that watchpoint result
             */
             default:
-                if (RPNData < LC_MAX_WATCHPOINTS)
-                {
-                    PUSH_RPN_DATA (LC_OperData.WRTPtr[RPNData].WatchResult);
-                }
-                else
-                {
-                    IllegalRPN = true   ;
+                if (RPNData < LC_MAX_WATCHPOINTS) {
+                    PUSH_RPN_DATA(LC_OperData.WRTPtr[RPNData].WatchResult);
+                } else {
+                    IllegalRPN = true;
                 }
                 break;
 
         } /* end switch */
-        
-        /* 
-        ** If still not done and have no errors - check for the end of the buffer 
+
+        /*
+        ** If still not done and have no errors - check for the end of the
+        *buffer
         */
-        if ((Done == false   )          && 
-            (IllegalRPN == false   )    && 
-            (IllegalOperand == false   ))
-        {
-            if (RPNEquationPtr >= LC_MAX_RPN_EQU_SIZE)
-            {
-                IllegalRPN = true   ;
+        if ((Done == false) && (IllegalRPN == false) &&
+            (IllegalOperand == false)) {
+            if (RPNEquationPtr >= LC_MAX_RPN_EQU_SIZE) {
+                IllegalRPN = true;
             }
         }
 
     } /* end while */
 
-    if (IllegalRPN == true   )
-    {
+    if (IllegalRPN == true) {
         CFE_EVS_SendEvent(LC_INVALID_RPN_ERR_EID, CFE_EVS_EventType_ERROR,
-               "AP has illegal RPN expression: AP = %d, LastOperand = %d, StackPtr = %d",
-               APNumber, (int)(RPNEquationPtr - 1), (int)StackPtr);
-                 
+                          "AP has illegal RPN expression: AP = %d, LastOperand "
+                          "= %d, StackPtr = %d",
+                          APNumber, (int)(RPNEquationPtr - 1), (int)StackPtr);
+
         EvalResult = LC_ACTION_ERROR;
-    }
-    else if (EvalResult == LC_WATCH_ERROR)
-    {
+    } else if (EvalResult == LC_WATCH_ERROR) {
         EvalResult = LC_ACTION_ERROR;
-    }
-    else if (EvalResult == LC_WATCH_STALE)
-    {
+    } else if (EvalResult == LC_WATCH_STALE) {
         EvalResult = LC_ACTION_STALE;
-    }
-    else if (EvalResult == LC_WATCH_FALSE   )
-    {
+    } else if (EvalResult == LC_WATCH_FALSE) {
         EvalResult = LC_ACTION_PASS;
-    }
-    else if (EvalResult == LC_WATCH_TRUE   )
-    {
+    } else if (EvalResult == LC_WATCH_TRUE) {
         EvalResult = LC_ACTION_FAIL;
     }
 
     return (EvalResult);
-    
+
 } /* end LC_EvaluateRPN */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                 */
 /* Validate the actionpoint definition table (ADT)                 */
 /*                                                                 */
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */   
-int32 LC_ValidateADT(void *TableData)
-{
-    LC_ADTEntry_t *TableArray = (LC_ADTEntry_t *) TableData;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+int32 LC_ValidateADT(void *TableData) {
+    LC_ADTEntry_t *TableArray = (LC_ADTEntry_t *)TableData;
 
     int32 EntryResult = LC_ADTVAL_NO_ERR;
     int32 TableResult = CFE_SUCCESS;
     int32 TableIndex;
 
-    uint8           DefaultState;    
-    uint16          RTSId;
-    uint16          MaxFailsBeforeRTS;      
-    uint16          EventType;
-    
-    uint16         *RPNPtr; 
-     int32          RPNIndex      = 0;
-     int32          RPNStackDepth = 0;
-    
+    uint8 DefaultState;
+    uint16 RTSId;
+    uint16 MaxFailsBeforeRTS;
+    uint16 EventType;
+
+    uint16 *RPNPtr;
+    int32 RPNIndex      = 0;
+    int32 RPNStackDepth = 0;
+
     int32 GoodCount   = 0;
     int32 BadCount    = 0;
     int32 UnusedCount = 0;
@@ -540,131 +476,114 @@ int32 LC_ValidateADT(void *TableData)
     /*
     ** Verify each entry in the pending actionpoint definition table
     */
-    for (TableIndex = 0; TableIndex < LC_MAX_ACTIONPOINTS; TableIndex++ )
-    {
+    for (TableIndex = 0; TableIndex < LC_MAX_ACTIONPOINTS; TableIndex++) {
         DefaultState      = TableArray[TableIndex].DefaultState;
         RTSId             = TableArray[TableIndex].RTSId;
         MaxFailsBeforeRTS = TableArray[TableIndex].MaxFailsBeforeRTS;
         RPNPtr            = TableArray[TableIndex].RPNEquation;
         EventType         = TableArray[TableIndex].EventType;
 
-        if (DefaultState == LC_ACTION_NOT_USED)
-        {
+        if (DefaultState == LC_ACTION_NOT_USED) {
             /*
             ** Unused table entry
             */
             UnusedCount++;
-        }
-        else if ((DefaultState != LC_APSTATE_ACTIVE)    &&
-                 (DefaultState != LC_APSTATE_PASSIVE)   &&
-                 (DefaultState != LC_APSTATE_DISABLED)  &&
-                 (DefaultState != LC_APSTATE_PERMOFF))
-        {
+        } else if ((DefaultState != LC_APSTATE_ACTIVE) &&
+                   (DefaultState != LC_APSTATE_PASSIVE) &&
+                   (DefaultState != LC_APSTATE_DISABLED) &&
+                   (DefaultState != LC_APSTATE_PERMOFF)) {
             /*
             ** Invalid default state
             */
             BadCount++;
             EntryResult = LC_ADTVAL_ERR_DEFSTATE;
-        }
-        else if (RTSId > LC_MAX_VALID_ADT_RTSID)
-        {
+        } else if (RTSId > LC_MAX_VALID_ADT_RTSID) {
             /*
             ** Bad RTS ID (limit set by configuration parameter,
             ** see lc_platform_cfg.h)
             */
             BadCount++;
             EntryResult = LC_ADTVAL_ERR_RTSID;
-        }
-        else if (MaxFailsBeforeRTS == 0)
-        {
+        } else if (MaxFailsBeforeRTS == 0) {
             /*
             ** Bad fail count
             */
             BadCount++;
             EntryResult = LC_ADTVAL_ERR_FAILCNT;
-        }
-        else if ((EventType != CFE_EVS_EventType_DEBUG)       &&
-                 (EventType != CFE_EVS_EventType_INFORMATION) &&
-                 (EventType != CFE_EVS_EventType_ERROR)       &&
-                 (EventType != CFE_EVS_EventType_CRITICAL))
-        {
+        } else if ((EventType != CFE_EVS_EventType_DEBUG) &&
+                   (EventType != CFE_EVS_EventType_INFORMATION) &&
+                   (EventType != CFE_EVS_EventType_ERROR) &&
+                   (EventType != CFE_EVS_EventType_CRITICAL)) {
             /*
             ** Invalid event type
             */
             BadCount++;
             EntryResult = LC_ADTVAL_ERR_EVTTYPE;
-        }
-        else
-        {
+        } else {
             /*
             ** Validate reverse polish equation syntax
             */
             EntryResult = LC_ValidateRPN(RPNPtr, &RPNIndex, &RPNStackDepth);
-            
-            if (EntryResult != LC_ADTVAL_NO_ERR)
-            {
+
+            if (EntryResult != LC_ADTVAL_NO_ERR) {
                 BadCount++;
-            }
-            else
-            {
+            } else {
                 GoodCount++;
             }
         }
-        
+
         /*
         ** Generate detailed event for "first" error
         */
-        if ((EntryResult != LC_ADTVAL_NO_ERR) && (TableResult == CFE_SUCCESS))
-        {
-            if (EntryResult == LC_ADTVAL_ERR_RPN)
-            {
-                CFE_EVS_SendEvent(LC_ADTVAL_RPNERR_EID, CFE_EVS_EventType_ERROR,
-                        "ADT verify RPN err: AP = %d, Index = %d, StackDepth = %d",
-                        (int)TableIndex, (int)RPNIndex, (int)RPNStackDepth);
-            }
-            else
-            {
+        if ((EntryResult != LC_ADTVAL_NO_ERR) && (TableResult == CFE_SUCCESS)) {
+            if (EntryResult == LC_ADTVAL_ERR_RPN) {
+                CFE_EVS_SendEvent(
+                    LC_ADTVAL_RPNERR_EID, CFE_EVS_EventType_ERROR,
+                    "ADT verify RPN err: AP = %d, Index = %d, StackDepth = %d",
+                    (int)TableIndex, (int)RPNIndex, (int)RPNStackDepth);
+            } else {
                 CFE_EVS_SendEvent(LC_ADTVAL_ERR_EID, CFE_EVS_EventType_ERROR,
-                        "ADT verify err: AP = %d, Err = %d, State = %d, RTS = %d, FailCnt = %d, EvtType = %d",
-                        (int)TableIndex, (int)EntryResult, DefaultState, RTSId, MaxFailsBeforeRTS, EventType );
+                                  "ADT verify err: AP = %d, Err = %d, State = "
+                                  "%d, RTS = %d, FailCnt = %d, EvtType = %d",
+                                  (int)TableIndex, (int)EntryResult,
+                                  DefaultState, RTSId, MaxFailsBeforeRTS,
+                                  EventType);
             }
-            
+
             TableResult = EntryResult;
         }
-        
+
     } /* end TableIndex for */
-    
+
     /*
     ** Generate informational event with error totals
     */
     CFE_EVS_SendEvent(LC_ADTVAL_INF_EID, CFE_EVS_EventType_INFORMATION,
-                     "ADT verify results: good = %d, bad = %d, unused = %d",
+                      "ADT verify results: good = %d, bad = %d, unused = %d",
                       (int)GoodCount, (int)BadCount, (int)UnusedCount);
 
-    return(TableResult);
-    
+    return (TableResult);
+
 } /* end LC_ValidateADT */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                 */
 /* Validate a reverse polish notation (RPN) equation               */
 /*                                                                 */
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */   
-int32 LC_ValidateRPN(uint16 *RPNPtr, 
-                     int32  *IndexValue, 
-                     int32  *StackDepthValue)
-{
-    int32   Result = LC_ADTVAL_NO_ERR;
-    int32   BufferIndex;
-    int32   StackDepth;
-    uint16  BufferItem;
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+int32 LC_ValidateRPN(uint16 *RPNPtr, int32 *IndexValue,
+                     int32 *StackDepthValue) {
+    int32 Result = LC_ADTVAL_NO_ERR;
+    int32 BufferIndex;
+    int32 StackDepth;
+    uint16 BufferItem;
 
     /*
     ** Each equation consists only of watchpoint ID numbers
     ** and polish symbols (and, or, equal, etc).
     **
     ** Each watchpoint ID increases the stack depth and
-    ** each polish symbol (except "not" which has no 
+    ** each polish symbol (except "not" which has no
     ** effect) decreases the stack depth.
     **
     ** The stack depth must never become negative and the
@@ -676,42 +595,31 @@ int32 LC_ValidateRPN(uint16 *RPNPtr,
     */
     StackDepth = 0;
 
-    for (BufferIndex = 0; BufferIndex < LC_MAX_RPN_EQU_SIZE; BufferIndex++)
-    {
+    for (BufferIndex = 0; BufferIndex < LC_MAX_RPN_EQU_SIZE; BufferIndex++) {
         BufferItem = RPNPtr[BufferIndex];
 
-        if ((BufferItem == LC_RPN_AND) ||
-            (BufferItem == LC_RPN_OR)  ||
-            (BufferItem == LC_RPN_XOR))
-        {
+        if ((BufferItem == LC_RPN_AND) || (BufferItem == LC_RPN_OR) ||
+            (BufferItem == LC_RPN_XOR)) {
             /*
             ** Depth test will fail if we haven't already counted 2
             ** watchpoint ID values
             */
             StackDepth--;
-        }
-        else if (BufferItem == LC_RPN_NOT)
-        {
+        } else if (BufferItem == LC_RPN_NOT) {
             /*
             ** Depth test will fail if this is 1st symbol
             */
-        }
-        else if (BufferItem == LC_RPN_EQUAL)
-        {
+        } else if (BufferItem == LC_RPN_EQUAL) {
             /*
             ** Equation ends when LC_RPN_EQUAL is found
             */
             break;
-        }
-        else if (BufferItem < LC_MAX_WATCHPOINTS)
-        {
+        } else if (BufferItem < LC_MAX_WATCHPOINTS) {
             /*
             ** Valid watchpoint ID
             */
             StackDepth++;
-        }
-        else
-        {
+        } else {
             /*
             ** Not a valid polish symbol or watchpoint ID
             */
@@ -721,8 +629,7 @@ int32 LC_ValidateRPN(uint16 *RPNPtr,
         /*
         ** Must have more watchpoint ID's than polish symbols
         */
-        if (StackDepth <= 0)
-        {
+        if (StackDepth <= 0) {
             break;
         }
     }
@@ -730,12 +637,9 @@ int32 LC_ValidateRPN(uint16 *RPNPtr,
     /*
     ** Check for valid Reverse Polish Notation equation
     */
-    if ((BufferItem == LC_RPN_EQUAL) && (StackDepth == 1))
-    {
+    if ((BufferItem == LC_RPN_EQUAL) && (StackDepth == 1)) {
         Result = LC_ADTVAL_NO_ERR;
-    }
-    else
-    {
+    } else {
         Result = LC_ADTVAL_ERR_RPN;
 
         /*
@@ -745,8 +649,8 @@ int32 LC_ValidateRPN(uint16 *RPNPtr,
         *StackDepthValue = StackDepth;
     }
 
-    return(Result);
-    
+    return (Result);
+
 } /* end LC_ValidateRPN */
 
 /************************/
