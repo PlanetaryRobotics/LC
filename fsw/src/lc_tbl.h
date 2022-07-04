@@ -178,9 +178,9 @@ typedef struct {
     uint32 CumulativeFailCount; /**< \brief Total number of times this
                                    actionpoint has evaluated to Fail */
     uint32
-        CumulativeRTSExecCount; /**< \brief Total number of times an RTS request
-                                            has been sent for this actionpoint
-                                 */
+        CumulativeRTSExecCount;     /**< \brief Total number of times an RTS
+                                       request  has been sent for this actionpoint
+                                     */
     uint32 CumulativeEventMsgsSent; /**< \brief Total number of event messages
                                        sent    */
 } LC_ARTEntry_t;
